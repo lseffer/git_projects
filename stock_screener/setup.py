@@ -10,4 +10,7 @@ setup(
         '': ['*.txt'],
     },
     zip_safe=False,
+    install_requires=[
+          'good_morning'
+      ],
 )
