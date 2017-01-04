@@ -9,8 +9,5 @@ setup(
         # If any package contains *.txt or *.rst files, include them:
         '': ['*.txt'],
     },
-    zip_safe=False,
-    install_requires=[
-          'good_morning'
-      ],
+    zip_safe=False
 )
