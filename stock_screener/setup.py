@@ -9,5 +9,10 @@ setup(
         # If any package contains *.txt or *.rst files, include them:
         '': ['*.txt'],
     },
-    zip_safe=False
+    zip_safe=False,
+    install_requires=[
+          'PyMySQL',
+          'pandas',
+          'numpy',
+      ]
 )
