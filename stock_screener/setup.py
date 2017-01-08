@@ -14,5 +14,6 @@ setup(
           'PyMySQL',
           'pandas',
           'numpy',
+          'pandas-datareader',
       ]
 )
