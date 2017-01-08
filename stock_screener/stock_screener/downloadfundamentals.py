@@ -3,6 +3,9 @@ import pandas as pd
 import time as t
 import re
 import pickle
+import datetime
+import numpy as np
+import pandas_datareader.data as web
 
 import stock_screener.good_morning as gm
 from stock_screener.helperfunctions import *
@@ -118,3 +121,87 @@ def financialdata(tickerlist):
         fd_dict.clear
 
     return finData      
+
+def stockpricedata(tickerlist):
+    end_date_list=[]
+    start_date_list=[]
+    for year in range(0,11):
+        end_date_list.append(datetime.date(2015-year,12,31))
+        start_date_list.append(datetime.date(2015-year,12,31-6))
+    dates_list = [start_date_list,end_date_list]
+    #
+    #haloj=web.DataReader(['AAK.ST','ABB.ST'],'yahoo','2015-12-25','2015-12-31')
+    #print(haloj)
+    #
+    #adjCloseMeanDF = pd.DataFrame(columns=haloj.columns)
+    #adjCloseMeanDF
+
+    #stock_price_tickerlist=['AAK.ST','ABB.ST','^GDAXI']
+
+    for dt in range(0,len(dates_list[0])):
+
+        haloj=web.DataReader(stock_price_tickerlist,'yahoo',dates_list[0][dt],dates_list[1][dt])['Adj Close']        
+        if dt==0: 
+            adjCloseMeanDF = pd.DataFrame(index=dates_list[1],columns=haloj.columns)    
+        
+        for k in haloj.columns:
+            
+            adjCloseMeanDF.set_value(dates_list[1][dt],k,np.mean(haloj[k]))
+
+    adjCloseMeanDF.sort_index(inplace=True)
+    adjCloseChange=adjCloseMeanDF.pct_change()
+    adjCloseChange2=pd.DataFrame(index=adjCloseChange.index,columns=adjCloseChange.columns)
+    for k in adjCloseChange.columns:
+                
+                adjCloseChange2[k]=np.where(adjCloseChange[k]>adjCloseChange['^GDAXI']+0.05,1,0)
+
+
+
+    #testdf['Year']=testdf.index.to_date().year
+
+
+    testdf=adjCloseChange2.stack().to_frame()
+    #testdf.index.get_level_values(0).tolist()
+    testdf2=adjCloseMeanDF.stack().to_frame()
+
+    testdf2.rename(columns={0:'eoy_price'},inplace=True)
+
+    testdf.rename(columns={0:'12mWinner'},inplace=True)
+
+    testdf3=testdf.join(testdf2)
+
+    #testdf['datetime']=np.asarray(testdf.index.get_level_values(0).tolist())
+
+    #testdf['year']=testdf[testdf.index.get_level_values(0)].map(lambda x: x.year)
+    #testdf['year']=pd.DatetimeIndex(testdf[])
+    #pd.DatetimeIndex(testdf)
+
+    testdf3.reset_index(inplace=True)
+
+    testdf3['Year']=testdf3['level_0'].apply(lambda x: x.year)
+    testdf3['Month']=testdf3['level_0'].apply(lambda x: x.month)
+    testdf3['Day']=testdf3['level_0'].apply(lambda x: x.day)
+    testdf3['Ticker']=testdf3['level_1']
+    testdf3.set_index(['Year','Month','Day','Ticker'],inplace=True)
+    del testdf3['level_1'],testdf3['level_0']
+    testdf3.reset_index(inplace=True)
+
+
+    asddf=pd.DataFrame(textData)
+
+
+    asddf['Ticker']=stock_price_tickerlist[:len(stock_price_tickerlist)-1]
+    asddf['Osloticker']=tickerlist
+
+
+    testdf4=pd.merge(testdf3,asddf,how='left',on=['Ticker'])
+    if oslo:
+        testdf4.rename(columns={'Ticker':'yTicker','Osloticker':'Ticker',0 : 'Comp_name'},inplace=True)
+    else:
+        testdf4.rename(columns={'Ticker':'yTicker',3:'Ticker',0 : 'Comp_name'},inplace=True)
+
+
+
+    testdf4=testdf4[['Year','Month','Day','Ticker','12mWinner','eoy_price','Comp_name']]
+    testdf4=testdf4[pd.notnull(testdf4['Ticker'])]
+    return testdf4

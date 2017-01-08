@@ -3,6 +3,8 @@ import pandas as pd
 import pickle
 import os
 
+import pkg_resources
+
 def duplicate_columns(frame):
     groups = frame.columns.to_series().groupby(frame.dtypes).groups
     dups = []
@@ -62,7 +64,43 @@ def restructure_df(df,curris,stock):
     test2['Currency']=curris
     return test2
 
-def saveobject(inputobject,name,folder):
+def saveobject(inputobject,folder,name):
     pickle_out=open(os.path.join(folder,name),'wb')
     pickle.dump(inputobject, pickle_out)
     pickle_out.close()
+
+def getresources():
+    resfiles = pkg_resources.resource_listdir('stock_screener','resources')
+    textfiles = [x for x in resfiles if x[-4:]=='.txt']
+    return textfiles
+
+def parsetxtfiles(reslist):
+    rawtext = {}
+    for resource in reslist:
+        tmp1 =   pkg_resources.resource_string('stock_screener','/'.join(('resources',resource))).decode('utf-8','ignore')
+        tmp2 = [list(filter(None,x.split('\t'))) for x in tmp1.split('\n')]
+        tmp3 = [x for x in tmp2 if x!=[]]
+        rawtext[resource]=tmp3
+    parseddict = {}
+    for filename in rawtext:
+        if 'oslo' in filename: 
+            gm_input = [x[1].replace('OSE: ','XOSL:') for x in rawtext[resource]]
+            yahoo_input = [x[1].replace('OSE: ','')+'.OL' for x in rawtext[filename]]
+        else:
+            gm_input = [x[3] for x in rawtext[filename]]
+            if 'stockholm' in filename:
+                yahoo_input = [(x[1]+'.ST').replace(' ','-') for x in rawtext[filename]]
+            if 'helsinki' in filename:
+                yahoo_input = [(x[1]+'.HE').replace(' ','-') for x in rawtext[filename]]
+            if 'copenhagen' in filename:
+                yahoo_input = [(x[1]+'.CO').replace(' ','-') for x in rawtext[filename]]
+            else:
+                yahoo_input = [
+                (x[1]+'.ST').replace(' ','-') if x[2]=='SEK' else 
+                (x[1]+'.HE').replace(' ','-') if x[2]=='EUR' else
+                (x[1].replace('o','')+'.OL').replace(' ','-') if x[2]=='NOK' else
+                (x[1]+'.CO').replace(' ','-') if x[2]=='DKK' else
+                (x[1]+'.ST').replace(' ','-')  for x in rawtext[filename]]
+        yahoo_input.append('^GDAXI')
+        parseddict[filename]= [gm_input,yahoo_input]
+    return parseddict
