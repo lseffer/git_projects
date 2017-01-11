@@ -64,10 +64,16 @@ def restructure_df(df,curris,stock):
     test2['Currency']=curris
     return test2
 
-def saveobject(inputobject,folder,name):
-    pickle_out=open(os.path.join(folder,name),'wb')
+def saveobject(inputobject,path):
+    pickle_out=open(path,'wb')
     pickle.dump(inputobject, pickle_out)
     pickle_out.close()
+
+def openobject(path):
+    filehandler = open(path,'rb')
+    outputobject = pickle.load(filehandler)
+    filehandler.close()
+    return outputobject
 
 def getresources():
     resfiles = pkg_resources.resource_listdir('stock_screener','resources')
