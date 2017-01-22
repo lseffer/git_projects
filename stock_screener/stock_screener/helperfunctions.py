@@ -2,6 +2,8 @@ from pandas.core.common import array_equivalent
 import pandas as pd
 import pickle
 import os
+import bs4 as bs
+import requests
 
 import pkg_resources
 
@@ -75,22 +77,37 @@ def openobject(path):
     filehandler.close()
     return outputobject
 
+def get_listed_companyinfo(urllist):
+    outputdict = {}
+    for url in urllist:    
+        resp = requests.get(url)
+        soup = bs.BeautifulSoup(resp.text, 'lxml')
+        table = soup.find('table',{'id' : 'listedCompanies'})
+        tickerrows = []
+        for row in table.findAll('tr')[1:]:
+            tickerrows.append([cell.string for cell in row.findChildren('td')[:-1]])
+        outputdict[url] = tickerrows
+    return outputdict 
+
 def getresources():
     resfiles = pkg_resources.resource_listdir('stock_screener','resources')
     textfiles = [x for x in resfiles if x[-4:]=='.txt']
     return textfiles
 
-def parsetxtfiles(reslist):
-    rawtext = {}
-    for resource in reslist:
-        tmp1 =   pkg_resources.resource_string('stock_screener','/'.join(('resources',resource))).decode('utf-8','ignore')
-        tmp2 = [list(filter(None,x.split('\t'))) for x in tmp1.split('\n')]
-        tmp3 = [x for x in tmp2 if x!=[]]
-        rawtext[resource]=tmp3
+def parsetxtfiles(reslist=None, input_dict = None):
+    if reslist:
+        rawtext = {}
+        for resource in reslist:
+            tmp1 =   pkg_resources.resource_string('stock_screener','/'.join(('resources',resource))).decode('utf-8','ignore')
+            tmp2 = [list(filter(None,x.split('\t'))) for x in tmp1.split('\n')]
+            tmp3 = [x for x in tmp2 if x!=[]]
+            rawtext[resource]=tmp3
     parseddict = {}
+    if input_dict:
+        rawtext=input_dict
     for filename in rawtext:
         if 'oslo' in filename: 
-            gm_input = [x[1].replace('OSE: ','XOSL:') for x in rawtext[resource]]
+            gm_input = [x[1].replace('OSE: ','XOSL:') for x in rawtext[filename]]
             yahoo_input = [x[1].replace('OSE: ','')+'.OL' for x in rawtext[filename]]
         else:
             gm_input = [x[3] for x in rawtext[filename]]
